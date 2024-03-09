@@ -9,25 +9,26 @@ pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tessera
 
 typing_speed = float(input("1文字間隔のスピードを秒単位で入力してください（例: 0.1）: "))
 
+class TypingQueue(queue.Queue):
+    def clear(self):
+        while not self.empty():
+            self.get()
+
+    def add_text(self, text):
+        for char in text:
+            self.put(char)
+
+    def type_from_queue(self):
+        if not self.empty():
+            text_to_type = ''.join(list(self.queue))  # キューの内容を一括で取得
+            self.clear()  # キューをクリア
+            pyautogui.typewrite(text_to_type, interval=typing_speed)
+
 # タイピングする文字列を管理するキュー
-typing_queue = queue.Queue()
+typing_queue = TypingQueue()
 
 # 最後に認識した単語を保持する変数
-last_text = ""
-
-def clear_queue():
-    while not typing_queue.empty():
-        typing_queue.get()
-
-def add_text_to_queue(text):
-    for char in text:
-        typing_queue.put(char)
-
-def type_from_queue():
-    if not typing_queue.empty():
-        text_to_type = ''.join(typing_queue.queue)  # キューの内容を一括で取得
-        clear_queue()  # キューをクリア
-        pyautogui.typewrite(text_to_type, interval=typing_speed)
+last_text = ''
 
 # 認識した文字を整える
 def clean_text(text):
@@ -78,12 +79,13 @@ while True:
     # 新しい単語が前の単語と異なる場合、キューをクリアして新しいテキストを追加
     if text_to_type != last_text:
         print(text_to_type)
-        clear_queue()
-        add_text_to_queue(text_to_type)
+        typing_queue.clear()
+        typing_queue.add_text(text_to_type)
         last_text = text_to_type
 
         # キューから文字を取り出してタイピング
-        type_from_queue()
+        typing_queue.type_from_queue()
 
-    time.sleep(0.005)
+    time.sleep(0.01)
+
 
